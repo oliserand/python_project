@@ -63,6 +63,7 @@ def translateSeq(sequence,frame=0):
 
 globList = []
 def multiline(curPos, pattern='REFERENCE', level1=2, level2=3, nspace=12):
+    #Does the multiline stuffs.. Returns a dict for the current pattern
     currDict = {pattern:[]}
     #Give current line (level0), finds the next line
     if line.startswith(pattern):
@@ -86,14 +87,18 @@ def multiline(curPos, pattern='REFERENCE', level1=2, level2=3, nspace=12):
                 tmpLine = ' '.join((lines[curPos+counter1+counter2].split()[0:]))
                 tmpVal += ' ' + tmpLine #Otherwise space is truncated
                 counter2 += 1
+            
             #It seems that an empty key is added.. Removed with if statement
             if tmpKey != '':
+                if '/' in tmpVal:
+                    tmpVal = tmpVal.split('/')
+                    #Add a map strip operation here
                 currDict[pattern].append({tmpKey: tmpVal}) 
             counter1 += 1
     #Record position of dict
     globList.append(currDict)
     return currDict
-    
+
 
 filename = 'sequence.gb'
 #Parsing the genbank file
@@ -101,7 +106,6 @@ with open(filename) as handle:
     #Try to consider multiple records, in a later dict implementation
     lines = handle.readlines()
     readSeq = False
-    readFeatures = False
     sequence = ''
     for lineIdx, line in enumerate(lines):
         #Extracting sequence details
@@ -119,12 +123,14 @@ with open(filename) as handle:
             source = description
         
         elif line.startswith('REFERENCE'):
-            #multiline(lineIdx, pattern='REFERENCE')
-            print(multiline(lineIdx, pattern='REFERENCE'))
+            pass
+            #Code works well
+            #print(multiline(lineIdx, pattern='REFERENCE'))
 
         elif line.startswith('FEATURES'):
-            readFeatures = True
-            print(multiline(lineIdx, pattern='FEATURES', level1=5, level2=5, nspace=21))
+            t = multiline(lineIdx, pattern='FEATURES', level1=5, level2=5, nspace=21)
+            for i in t['FEATURES']:
+                print(i)
             
         if line.startswith('ORIGIN'):
             readSeq = True
@@ -137,7 +143,6 @@ with open(filename) as handle:
         #Description (Source)
         #References
         #Features
-    readFeatures = False #Stop adding to string, in case of multiple records
     readSeq = False #Stop adding to string, in case of multiple records
     sequence = '' #Re-initialise sequence, in case of multiple records
   
@@ -147,13 +152,13 @@ with open(filename) as handle:
     line4 = 'Description: ' + description
     line5 = 'Source: ' + source
 
-    print(line1)
-    print(line2)
-    print(line3)
-    print(line4)
-    print(line5)
-
-
+#    print(line1)
+#    print(line2)
+#    print(line3)
+#    print(line4)
+#    print(line5)
+#
+#
 #References
 #Sequence
 #Motif
