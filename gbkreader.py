@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, re
 from urllib import request
 
 
@@ -49,40 +49,83 @@ def translateSeq(sequence,frame=0):
         protein += codonTable[codon]
     return protein
 
+#def motifMatch(motif, seq):
+#    #Takes a motif and a string seq. Returns a match
+#    #Allowed characters: *, ?, ATCG, [, ], (, )
+#    pattern = re.compile(motif)
+#    match = pattern.search(seq)
+#    if match != None:
+#        start = match.start()
+#        match.stop()
+#        result = seq[start:stop]
+#        #More work to add lower/ uppercase functionality
+#        return result
+
+globList = []
+def multiline(curPos, pattern='REFERENCE', level1=2, level2=3, nspace=12):
+    currDict = {pattern:[]}
+    #Give current line (level0), finds the next line
+    if line.startswith(pattern):
+        #Get the first key (for level0)
+        data = line.split()
+        key = data[0]
+        #Adding the reference number if entry if reference
+        if 'REFERENCE' in line:
+            refnum = data[1]
+            currDict[pattern].append({'REFNUM': refnum})
+        #While the next line starts with 2, 3 or 5 spaces (levels 1 and 2 are treated as one level)
+        counter1 = 1
+        while (lines[curPos+counter1].startswith(' '*level1)) or (lines[curPos+counter1].startswith(' '*level2)):
+            currLine = lines[curPos+counter1]
+            #Getting the second level
+            tmpKey = currLine[:nspace].strip()
+            tmpVal = currLine[nspace:].strip()
+            #Looking ahead for entry continuity across lines
+            counter2 = 1
+            while lines[curPos+counter1+counter2].startswith(' '*nspace):
+                tmpLine = ' '.join((lines[curPos+counter1+counter2].split()[0:]))
+                tmpVal += ' ' + tmpLine #Otherwise space is truncated
+                counter2 += 1
+            #It seems that an empty key is added.. Removed with if statement
+            if tmpKey != '':
+                currDict[pattern].append({tmpKey: tmpVal}) 
+            counter1 += 1
+    #Record position of dict
+    globList.append(currDict)
+    return currDict
+    
 
 filename = 'sequence.gb'
 #Parsing the genbank file
 with open(filename) as handle:
-    gbData = {}
     #Try to consider multiple records, in a later dict implementation
-    locusInfo = handle.readline().split()
-    locus = locusInfo[1]
-    length = locusInfo[2] + locusInfo[3]
     lines = handle.readlines()
     readSeq = False
     readFeatures = False
-    readRefs = False
     sequence = ''
-    for line in lines:
+    for lineIdx, line in enumerate(lines):
         #Extracting sequence details
-        if line.startswith('ACCESSION'):
+        if line.startswith('LOCUS'):
+            locusInfo = line.split()
+            locus = locusInfo[1]
+            length = locusInfo[2] + locusInfo[3]
+        
+        elif line.startswith('ACCESSION'):
             accession = line.split()[1]
+        
         elif line.startswith('SOURCE'):
             description = line.split()[1:]
             description = ' '.join(description)
             source = description
+        
         elif line.startswith('REFERENCE'):
-            readRefs = True
-            ref = {} #Create a dict for the references
+            #multiline(lineIdx, pattern='REFERENCE')
+            print(multiline(lineIdx, pattern='REFERENCE'))
+
         elif line.startswith('FEATURES'):
-            #The features
-            features = {} #Create a dict for the features
             readFeatures = True
-            pass
-        if (readRefs == True) and ('REFERENCE' not in line):
-                #Get Reference details and put them in a ref dict
-                #With key = number
-                pass
+            print(multiline(lineIdx, pattern='FEATURES', level1=5, level2=5, nspace=21))
+            
         if line.startswith('ORIGIN'):
             readSeq = True
         if (readSeq == True) and ('ORIGIN' not in line) and ('//' not in line):
@@ -96,7 +139,6 @@ with open(filename) as handle:
         #Features
     readFeatures = False #Stop adding to string, in case of multiple records
     readSeq = False #Stop adding to string, in case of multiple records
-    readRefs = False
     sequence = '' #Re-initialise sequence, in case of multiple records
   
     line1 = 'GBK Reader - (' + filename +') DNA'
