@@ -40,20 +40,21 @@ else:
             codonTable[codon] = aa.lstrip()
 
 
-globList = []
+globList = {'FEATURES':[],'SEQUENCE':'','XREF':[]}
 def multiline(curPos, pattern='REFERENCE', level1=2, level2=3, nspace=12):
     #Does the multiline stuffs.. Returns a dict for the current pattern
+    #Dictionary for the pattern (1. every reference, 2. features )
+    #If line starts with REFERENCE or FEATURES
     currDict = {pattern:{}}
-    #Given current line (level0) -> find the next line
     if line.startswith(pattern):
-        #Get the first key (for level0)
-        data = line.split()
-        key = data[0]
         #Adding the reference number if entry if reference
         if 'REFERENCE' in line:
+            #Get REFERENCE details at level0
+            data = line.split()
             refnum = data[1]
             currDict[pattern]['REFNUM'] = refnum
-        #While the next line starts with 2, 3 or 5 spaces (levels 1 and 2 are treated as one level)
+        #Advance to level 1
+        #While line 1 starts with 2, 3 or 5 spaces (levels 1 and 2 are treated as one level)
         counter1 = 1
         while (lines[curPos+counter1].startswith(' '*level1)) or (lines[curPos+counter1].startswith(' '*level2)):
             currLine = lines[curPos+counter1]
@@ -66,8 +67,7 @@ def multiline(curPos, pattern='REFERENCE', level1=2, level2=3, nspace=12):
                 tmpLine = ' '.join((lines[curPos+counter1+counter2].split()[0:]))
                 tmpVal += ' ' + tmpLine #Otherwise space is truncated
                 counter2 += 1
-            
-            #It seems that an empty key is added.. Removed with if statement
+            #It seems that an empty key is added because of line continuation.. Remove with if statement
             if tmpKey != '':
                 if '/' in tmpVal:
                     tmpVal = tmpVal.split('/')
@@ -78,11 +78,18 @@ def multiline(curPos, pattern='REFERENCE', level1=2, level2=3, nspace=12):
                         if 'translation' in k:
                             k = k.replace(' ', '')
                             tmpVal[j] = k
-                
-                currDict[pattern][tmpKey] = tmpVal
+
+                #Partition the keys accordingly
+                if pattern == 'REFERENCE':
+                    currDict[tmpKey] = tmpVal
+                    #globList['XREF'].append(currDict)
+                elif pattern == 'FEATURES':
+                    currDict[pattern][tmpKey] = tmpVal
+                    globList['FEATURES'].append(currDict)
+                print(currDict)
+                currDict = {pattern:{}}
             counter1 += 1
     #Record position of dict. Maybe add it to the object somewhere around here?
-    globList.append(currDict)
     
 def refHandler():
     '''Chek possible redundant additions'''
@@ -90,17 +97,19 @@ def refHandler():
     authors = []
     titles = []
     journal = ''
-    for dictionary in globList:
-        if list(dictionary.keys())[0] == 'REFERENCE':
-            numRef += 1
-            authors.append(dictionary['REFERENCE']['AUTHORS'])
-            titles.append(dictionary['REFERENCE']['TITLE'])
-            journal += dictionary['REFERENCE']['JOURNAL']
-
-        #print('test',dictionary)
-    print('There are', numRef, 'articles reported for the sequence', accession)
-    for idx, author in enumerate(authors):
-        print('['+str(idx+1)+']', author)
+    '''To correct data structure access here..'''
+#    globList['XREF']'REFERENCE']
+#    numRef = len(globList['XREF'])
+#    print(globList['XREF'])
+#    for i in globList['XREF']:
+#        print(i)
+#    authors.append(dictionary['REFERENCE']['AUTHORS'])
+#    titles.append(dictionary['REFERENCE']['TITLE'])
+#    journal += dictionary['REFERENCE']['JOURNAL']
+#
+#    print('There are', numRef, 'articles reported for the sequence', accession)
+#    for idx, author in enumerate(authors):
+#        print('['+str(idx+1)+']', author)
     refDetails = input('Input the number of a reference for details (M for the Menu) :')
     if refDetails == 'M':
         return 'continue'
@@ -157,24 +166,25 @@ def seqHandler():
         upperLim = int(rangeDisp[1]) 
         '''To correct limits'''
         if leftParen == '(':
+            pass
             #Exclude lim
-            lowerLim += 1
+            #lowerLim += 1
         elif leftParen == '[':
             #Include lim
             lowerLim -= 1
         if rightParen == ')':
             #Exclude lim
-            upperLim -= 1
+            #upperLim -= 1
+            pass
         elif rightParen == ']':
+            upperLim += 1
             #Include lim
             pass
         #Build the query
-        for dictionary in globList:
-            if list(dictionary.keys())[0] == 'SEQUENCE':
-                #String formatting
-                currSeq = dictionary['SEQUENCE'][lowerLim:upperLim].upper()
-                for i in range(0,len(currSeq), 60):
-                    print(currSeq[i:i+60])
+        #String formatting
+        currSeq = globList['SEQUENCE'][lowerLim:upperLim].upper()
+        for i in range(0,len(currSeq), 60):
+            print(currSeq[i:i+60])
         return None
  
 
@@ -190,7 +200,7 @@ with open(filename) as handle:
     lines = handle.readlines()
     recordLen = len(lines)
     readSeq = False
-    sequence = ''
+    #sequence = ''
     running = True
     while running:
         #The main loop
@@ -221,9 +231,9 @@ with open(filename) as handle:
                 tmpSeq = line.strip().split()
                 tmpSeq = tmpSeq[1:]
                 tmpSeq = ''.join(tmpSeq)
-                sequence += tmpSeq
-        globList.append({'SEQUENCE':sequence})
+                globList['SEQUENCE'] += tmpSeq
         readSeq = False #Stop adding to string, in case of multiple records
+        #globList.append({'SEQUENCE':sequence})
         sequence = '' #Re-initialise sequence, in case of multiple records
 
       
@@ -258,7 +268,7 @@ with open(filename) as handle:
             #Do sequence stuff
             if seqHandler() == 'continue':
                 continue
-        
+ 
         elif prompt == 'M':
             #Do motif stuff
             motifPrompt = input('Motif:')
