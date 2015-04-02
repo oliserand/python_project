@@ -44,26 +44,28 @@ def multiLines(pattern, lineIdx, line, level1, level2):
     space = ' '
     #Takes a string (REFERENCE or FEATURE) and returns a dict
     #Checking the first level. If it is level1, add it as a key
+    counter1 = 1
     if line.startswith(pattern):
-        counter1 = 1
-        while (lines[lineIdx+counter1].startswith(level1[0]*space) or lines[lineIdx+counter1].startswith(level1[1]*space)) and (not lines[lineIdx+counter1].startswith(level2*space)):
+        while lines[lineIdx+counter1].startswith(level1*space):
             #Extract the key
             nextLineLvl1 = lines[lineIdx+counter1]
             #The key is added to the REFERENCE or FEATURE in the genbank object
             tmpKey = nextLineLvl1[:12].strip()
-            tmpVal = nextLineLvl1[12:].rstrip()
-            counter1 += 1
-            counter2 = 0
-            ref[tmpKey] = tmpVal
+            tmpVal = nextLineLvl1[level2:].rstrip()
+            if tmpKey != '':
+                ref[tmpKey] = tmpVal
+            #print('-',lines[lineIdx+counter1+counter2])
+            counter2 = 1
             while lines[lineIdx+counter1+counter2].startswith(level2*space):
                 newTmpVal = lines[lineIdx+counter1+counter2].strip()
-                tmpVal += space + newTmpVal
+                tmpVal += (space + newTmpVal)
                 ref[tmpKey] = tmpVal
                 counter2 += 1
+            counter1 += 1
     #The ref dictionary contains all pattern (i.e pattern, or feature) information 
     #Can be added to the list in the reference object
  #   print(ref)
-    record.references.append(ref)
+        record.references.append(ref)
             
 
 
@@ -105,10 +107,11 @@ with open(filename, 'r') as handle:
             record.description = record.source
 
         if line.startswith('REFERENCE'):
-#            print(line)
-            multiLines('REFERENCE', lineIdx, line, [2,3], 12)
+            pass
+            multiLines('REFERENCE', lineIdx, line, 2, 12)
 
         if line.startswith(''):
+            #multiLines('FEATURES', lineIdx, line, 5, 21)
             pass
         if line.startswith(''):
             pass
