@@ -137,6 +137,34 @@ def dispRef():
         print('\t'+record.references[refNum]['JOURNAL'])
         refNum = input('Input the number of a reference for details (M for the Menu):')
 
+def dispSeq():
+    #Displays sequence ranges
+    seqRange = input('Range: ')
+    while seqRange != 'M' and seqRange != '':
+        leftParen = seqRange[0]
+        rightParen = seqRange[-1]
+        seqRange = seqRange[1:-1].split(',')
+        lowerLim = int(seqRange[0])
+        upperLim = int(seqRange[1]) 
+        '''To correct limits'''
+        if leftParen == '(':
+            #Exclude lim
+            pass
+        elif leftParen == '[':
+            #Include lim
+            lowerLim -= 1
+        if rightParen == ')':
+            #Exclude lim
+            pass
+        elif rightParen == ']':
+            #Include lim
+            upperLim += 1
+        #Build query
+        currSeq = record.sequence[lowerLim:upperLim].upper()
+        for i in range(0,len(currSeq), 60):
+            print(currSeq[i:i+60])
+        seqRange = input('Range: ')
+
 def dispMenu():
     #Displays menu
     prompt = input('R:References S:Sequence M:Motif T:Translate F:Features E:Export Q:Quit\n>')
@@ -152,7 +180,7 @@ def dispMenu():
 
         elif prompt == 'S':
             #Sequence handling
-            pass
+            dispSeq()
         
         elif prompt == 'M':
             #Motif handling
@@ -202,9 +230,9 @@ class GBRecord:
             print(codon)
 
 
-#The global container for all records
 finished = False
 while not finished:
+    #The container for all records
     records = []
     filename = 'sequence.gb'
     with open(filename, 'r') as handle:
