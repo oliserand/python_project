@@ -107,11 +107,7 @@ def getSeq(lineIdx):
     #Add sequence to record
     record.sequence = sequence
 
-
-def getMotif():
-    pass
-
-def gbk2fasta(record):
+def gb2fasta(record):
     #Converts genbank to fasta format
     sequence = record.sequence
     formattedSeq = ''
@@ -119,7 +115,30 @@ def gbk2fasta(record):
         formattedSeq += sequence[i:i+80]+'\n'
     '''Do I have to get the right description? for the header'''
     header = '>'+record.description+'\n' 
-    return (header, formattedSeq)
+    
+    destfile = input('Filename :')
+    while os.path.exists(destfile):
+        print('File exists. Provide a different name')
+        destfile = input('Filename :')
+    with open(destfile, 'w') as fasta_handle:
+        input('File ('+destfile+') created.')
+        fasta_handle.writelines(header)
+        fasta_handle.writelines(formattedSeq)
+
+def dispMotif():
+    '''To add Camel case for regex matches to *...'''
+    tmpSeq = record.sequence
+    motif = input('Motif:')
+    while motif != '':
+        while len(motif) < 5 and motif != '':
+            motif = input('Motif:')
+        if motif != '':
+            print('Searching for the motif', motif+'...' )
+            motifC = re.compile(motif)
+            match = motifC.search(tmpSeq)
+            tmpSeq2 = tmpSeq[match.start()-5:match.end()+5]
+            print(tmpSeq2[:5] + '['+str(match.start())+']' + tmpSeq[match.start():match.end()]+ '['+str(match.end())+']' + tmpSeq2[-5:] )
+            motif = input('Motif:')
 
 def dispRef():
     #Displays reference details
@@ -146,7 +165,7 @@ def dispSeq():
         seqRange = seqRange[1:-1].split(',')
         lowerLim = int(seqRange[0])
         upperLim = int(seqRange[1]) 
-        '''To correct limits'''
+        
         if leftParen == '(':
             #Exclude lim
             pass
@@ -165,7 +184,53 @@ def dispSeq():
             print(currSeq[i:i+60])
         seqRange = input('Range: ')
 
+def dispFeat():
+    #Displays features
+    def countFeat(featName):
+        #Returns feature count
+        totCount = 0
+        for featDict in record.features:
+            if featName in featDict.keys():
+                totCount += 1
+        return totCount
+   '''To continue here... Task isolate ranges from tmpKey, by cleaning numbers from strings''' 
+    def rangeHandler():
+        for featDict in record.features:
+            for feat in featDict.keys():
+                tmpKey = featDict[feat][0].split('..')
+                print(feat, tmpKey)
+
+    featPrompt = input('Choose the type of feature query P(Position) or N(Name) :')
+    while featPrompt != '':
+        if featPrompt == 'P':
+            #Check the first elements of the lists, mapped to the features in every dict
+            rangeHandler()
+
+        elif featPrompt == 'N':
+            featName = input('Name:')
+            countFeat(featName)
+            print('Searching for features with name', featName+'...')
+            featCount = 0
+            for featDict in record.features:
+                if featName in featDict.keys():
+                    featCount += 1
+                    tmpFeat = list(map(lambda x: '\t/'+x, featDict[featName]))
+                    print('Feature', featCount, 'of', countFeat(featName))
+                    print(featName, '\n'.join(tmpFeat))
+        featPrompt = input('Choose the type of feature query P(Position) or N(Name) :')
+
+
 def dispMenu():
+    #Displays record summary
+    print('GBK Reader - ('+filename+')'+'DNA')  
+    print('======================================================================')
+    print('Sequence:', record.accession, '('+record.locus+', '+record.length+')') 
+    print('Description:', record.description) 
+    print('Source:', record.source)
+    print('Number of References:', len(record.references)) 
+    print('Number of Features:', len(record.features)) 
+    print('======================================================================')
+    
     #Displays menu
     prompt = input('R:References S:Sequence M:Motif T:Translate F:Features E:Export Q:Quit\n>')
     if prompt == 'Q':
@@ -184,7 +249,7 @@ def dispMenu():
         
         elif prompt == 'M':
             #Motif handling
-            pass
+            dispMotif()
         
         elif prompt == 'T':
             #Translation
@@ -192,20 +257,11 @@ def dispMenu():
         
         elif prompt == 'F':
             #Feature handling
-            pass
+            dispFeat()
         
         elif prompt == 'E':
             #Export to fasta
-            destfile = input('Filename :')
-            while os.path.exists(destfile):
-                print('File exists. Provide a different name')
-                destfile = input('Filename :')
-            with open(destfile, 'w') as fasta_handle:
-                input('File ('+destfile+') created.')
-                fastaRec = gbk2fasta(record)
-                fasta_handle.writelines(fastaRec[0])
-                fasta_handle.writelines(fastaRec[1])
-
+            gb2fasta(record)
 
 
 class GBRecord:
