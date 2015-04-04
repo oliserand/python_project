@@ -146,7 +146,7 @@ def dispRef():
     for refIdx, ref in enumerate(record.references):
         print('['+str(refIdx+1)+']', ref['AUTHORS'])
     refNum = input('Input the number of a reference for details (M for the Menu):')
-    while refNum != 'M':
+    while refNum != 'M' and refNum != '':
         refNum = int(refNum) - 1
         print('Title:')
         print('\t'+record.references[refNum]['TITLE'])
@@ -166,16 +166,10 @@ def dispSeq():
         lowerLim = int(seqRange[0])
         upperLim = int(seqRange[1]) 
         
-        if leftParen == '(':
-            #Exclude lim
-            pass
-        elif leftParen == '[':
+        if leftParen == '[':
             #Include lim
             lowerLim -= 1
-        if rightParen == ')':
-            #Exclude lim
-            pass
-        elif rightParen == ']':
+        if rightParen == ']':
             #Include lim
             upperLim += 1
         #Build query
@@ -193,12 +187,40 @@ def dispFeat():
             if featName in featDict.keys():
                 totCount += 1
         return totCount
-   '''To continue here... Task isolate ranges from tmpKey, by cleaning numbers from strings''' 
-    def rangeHandler():
+    
+    def getLimitsAndTotal(givenRange, featureCounter, total, output):
+        #Extracts the positions from the features and prepares total number of matching features
         for featDict in record.features:
             for feat in featDict.keys():
-                tmpKey = featDict[feat][0].split('..')
-                print(feat, tmpKey)
+                #Every feature (feat) in featDict has its span as first element of a list
+                tmpRange = featDict[feat][0]
+                pattern = re.compile('(\d+)\.\.[<>]?(\d+)')
+                match = pattern.search(tmpRange)
+                #Limits are extracted
+                lowerLim = int(match.groups()[0])
+                upperLim = int(match.groups()[1])
+                if (lowerLim >= givenRange[0]) and (upperLim <= givenRange[1]):
+                    total.append(1)
+                    output.append((feat,featDict[feat]))
+
+    def rangeHandler():
+        rangePrompt = input('Range:')
+        givenRange = list(map(int, rangePrompt[1:-1].split(',')))
+        '''To correct printed limits - use a function'''
+        print('Searching for features in the range', '[687­3158]...')
+        
+        featureCounter = 0
+        total = []
+        output = []
+        getLimitsAndTotal(givenRange, featureCounter, total, output)
+        total = sum(total)
+
+        #Display the feature
+        for j in output:
+            featureCounter += 1
+            print('Feature', featureCounter, 'of', total)
+            print('\t'+j[0])
+            for k in j[1]: print('\t\t/'+k)
 
     featPrompt = input('Choose the type of feature query P(Position) or N(Name) :')
     while featPrompt != '':
@@ -215,12 +237,14 @@ def dispFeat():
                 if featName in featDict.keys():
                     featCount += 1
                     tmpFeat = list(map(lambda x: '\t/'+x, featDict[featName]))
+                    #Make a list of the output instead of printing
                     print('Feature', featCount, 'of', countFeat(featName))
                     print(featName, '\n'.join(tmpFeat))
         featPrompt = input('Choose the type of feature query P(Position) or N(Name) :')
 
 
 def dispMenu():
+    global filename
     #Displays record summary
     print('GBK Reader - ('+filename+')'+'DNA')  
     print('======================================================================')
@@ -238,6 +262,8 @@ def dispMenu():
         if confirm == 'E':
             global finished
             finished = True
+        elif confirm == 'F':
+            filename = input('Enter filename: ')
     else:
         if prompt == 'R':
             #Reference handling
@@ -253,7 +279,7 @@ def dispMenu():
         
         elif prompt == 'T':
             #Translation
-            pass
+            dispPeptide()
         
         elif prompt == 'F':
             #Feature handling
@@ -276,21 +302,88 @@ class GBRecord:
         self.features = []
         self.sequence = None
 
-    def translate(self, frame=0):
-        #Translates nucleotide -> protein, in different frames
-        self.peptide = ''
-        self.frame = frame
-        self.tmpSeq = self.sequence[frame:]
-        for i in range(0, len(self.tmpSeq)-3 + 1, 3):
-            codon = self.sequence[i:i+3]
-            print(codon)
+def translate(sequence, lowerLim, upperLim, frame):
+    '''Re-test translation functions in several cases.. Something seems odd'''
+    #Translates nucleotide -> protein, in different frames
+    sequence = sequence[lowerLim:upperLim].upper()    
+    
+    def formatSeq(seq):
+        #Formats sequence to 60chars per line
+        output = ''
+        for i in range(0, len(seq), 60):
+            output += (seq[i:i+60]+'\n')
+        return output
 
+    def outputPep(sequence, lowerLim, upperLim, frame):
+        peptide = ''
+        tmpSeq = sequence[frame:]
+        if frame == 0: fdisp = '1st'
+        elif frame == 1: fdisp = '2nd'
+        elif frame == 2: fdisp = '3rd'
+        
+        #If not None, return peptide
+        if pattern.search(tmpSeq):
+            match = pattern.search(tmpSeq)
+            ntStart = match.start()
+            ntEnd = match.end()
+            hit = tmpSeq[ntStart:ntEnd]
+        
+            for i in range(0, len(hit), 3):
+                codon = hit[i:i+3]
+                peptide += codonTable[codon]
+
+            print('Amino acids sequence from nucleotide', ntStart+lowerLim+1, 'to', ntEnd+lowerLim, 'in the', fdisp,'ORF')
+            print(formatSeq(peptide))
+            print(hit)
+
+    #Taking ATG -> start; ATG/TAA/TGA -> stop
+    pattern = re.compile('ATG([ATGC]{3})*?(TAG|TAA|TGA)')
+    if type(frame) == int:
+        outputPep(sequence, lowerLim, upperLim, frame)
+            
+    elif type(frame) == list:
+        for i in frame:
+            outputPep(sequence, lowerLim, upperLim, i)
+            
+def dispPeptide():
+    #Displays ORF translations
+    seqRange = input('Range: ')
+    frame = input('ORF:')
+    while seqRange != '':
+        if seqRange == 'FULL':
+            lowerLim = 0
+            upperLim = len(record.sequence)
+        else:
+            leftParen = seqRange[0]
+            rightParen = seqRange[-1]
+            seqRange = seqRange[1:-1].split(',')
+            lowerLim = int(seqRange[0])
+            upperLim = int(seqRange[1]) 
+            
+            if leftParen == '[':
+                #Include lim
+                lowerLim -= 1
+            
+            if rightParen == ']':
+                #Include lim
+                upperLim += 1
+
+        if frame == '1':
+            peptide = translate(record.sequence, lowerLim, upperLim, frame=0)
+        elif frame == '2':
+            peptide = translate(record.sequence, lowerLim, upperLim, frame=1)
+        elif frame == '3':
+            peptide = translate(record.sequence, lowerLim, upperLim, frame=2)
+        elif frame == '':
+            frame = [0,1,2]
+            peptide = translate(record.sequence, lowerLim, upperLim, frame=frame)
+
+        seqRange = input('Range: ')
+        frame = input('ORF:')
 
 finished = False
+filename = sys.argv[1]
 while not finished:
-    #The container for all records
-    records = []
-    filename = 'sequence.gb'
     with open(filename, 'r') as handle:
         lines = list(map(lambda x: x.rstrip(), handle.readlines()))
         record = GBRecord()
@@ -316,7 +409,5 @@ while not finished:
             if line.startswith('ORIGIN'):
                 getSeq(lineIdx)
 
-    #Queries
+    #Menu with prompts
     dispMenu() 
-    
-#print(record)
