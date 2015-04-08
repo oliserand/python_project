@@ -2,23 +2,6 @@ import sys, os, re
 from urllib import request
 
 
-'''
-The menu/ output
-GBK Reader ­ (file.gbk)DNA  
-====================================================================== 
-Sequence: U49845 (SCU49845, 5028bp) 
-Description: Saccharomyces cerevisiae (baker's yeast) 
-Source: Saccharomyces cerevisiae (baker's yeast) 
-Number of References: 3 
-Number of Features: 6 
-====================================================================== 
-R:References S:Sequence M:Motif T:Translate F:Features E:Export Q:Quit
->
-'''
-
-#Sections
-#R:References S:Sequence M:Motif T:Translate F:Features E:Export Q:Quit
-
 #Codon table
 codonTable = {}
 url = 'https://popoolation.googlecode.com/svn-history/\
