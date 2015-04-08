@@ -126,18 +126,40 @@ def gb2fasta(record):
         fasta_handle.writelines(formattedSeq)
 
 def dispMotif():
+
+    def formatOutput(motif, match):
+        #takes an motif (re object) and its equivalent string
+        #split the string
+        motif  = motif.replace('?',' ').replace('*', ' ').split()
+        groups = match.groups()
+        output = ''
+        try:
+            for i in range(len(motif)):
+                output += (motif[i] + groups[i].upper())
+        except IndexError:
+            #If there are fewer non-wildcard elements
+            output += motif[i]
+        return output
+        
+
     '''To add Camel case for regex matches to *...'''
     tmpSeq = record.sequence
+    #Request for motif. Make search case sensitive
     motif = input('Motif:')
     while motif != '':
+        #If motif is too short or empty, keep on asking for motif
         while len(motif) < 5 and motif != '':
             motif = input('Motif:')
+        motif = motif.lower()
         if motif != '':
             print('Searching for the motif', motif+'...' )
-            motifC = re.compile(motif)
-            match = motifC.search(tmpSeq)
+            #Replacing wildcards by re wildcards
+            motifReformatted = motif.replace('?','(.)').replace('*','(.*)')
+            motifObj = re.compile(motifReformatted)
+            match = motifObj.search(tmpSeq)
             tmpSeq2 = tmpSeq[match.start()-5:match.end()+5]
-            print(tmpSeq2[:5] + '['+str(match.start())+']' + tmpSeq[match.start():match.end()]+ '['+str(match.end())+']' + tmpSeq2[-5:] )
+            #print(tmpSeq2[:5] + '['+str(match.start())+']' + tmpSeq[match.start():match.end()]+ '['+str(match.end())+']' + tmpSeq2[-5:] )
+            print(tmpSeq2[:5] + '['+str(match.start())+']' + formatOutput(motif, match) + '['+str(match.end())+']' + tmpSeq2[-5:])
             motif = input('Motif:')
 
 def dispRef():
