@@ -90,6 +90,17 @@ def getSeq(lineIdx):
     #Add sequence to record
     record.sequence = sequence
 
+def getDef(lineIdx, line):
+    #Get the definition for the fasta defline
+    counter = 1
+    spaces = ' '*12
+    output = line[12:]
+    while lines[lineIdx+counter].startswith(spaces):
+        output += lines[lineIdx+counter][12:]
+        counter += 1
+    return output
+        
+################################################3
 def gb2fasta(record):
     #Converts genbank to fasta format
     sequence = record.sequence
@@ -97,7 +108,7 @@ def gb2fasta(record):
     for i in range(0, len(sequence), 80):
         formattedSeq += sequence[i:i+80]+'\n'
     '''Do I have to get the right description? for the header'''
-    header = '>'+record.description+'\n' 
+    header = '>'+record.definition+'\n' 
     
     destfile = input('Filename :')
     while os.path.exists(destfile):
@@ -124,12 +135,12 @@ def dispMotif():
             output += motif[i]
         return output
         
-
-    '''To add Camel case for regex matches to *...'''
     tmpSeq = record.sequence
     #Request for motif. Make search case sensitive
     motif = input('Motif:')
-    while motif != '':
+    #Do not accept an empty string or a string containing only non-alphabets chars
+    while motif != '' and (any(map(lambda x:x.isalpha(), motif))):
+        print('inside')
         #If motif is too short or empty, keep on asking for motif
         while len(motif) < 5 and motif != '':
             motif = input('Motif:')
@@ -141,7 +152,8 @@ def dispMotif():
             motifObj = re.compile(motifReformatted)
             match = motifObj.search(tmpSeq)
             tmpSeq2 = tmpSeq[match.start()-5:match.end()+5]
-            #print(tmpSeq2[:5] + '['+str(match.start())+']' + tmpSeq[match.start():match.end()]+ '['+str(match.end())+']' + tmpSeq2[-5:] )
+            print(tmpSeq2[:5] + '['+str(match.start())+']' + tmpSeq[match.start():match.end()]+ '['+str(match.end())+']' + tmpSeq2[-5:] )
+            print()
             print(tmpSeq2[:5] + '['+str(match.start())+']' + formatOutput(motif, match) + '['+str(match.end())+']' + tmpSeq2[-5:])
             motif = input('Motif:')
 
@@ -303,6 +315,7 @@ class GBRecord:
         self.length = None
         self.source= None
         self.description = None
+        self.definition = None
         self.references = []
         self.features = []
         self.sequence = None
@@ -397,7 +410,9 @@ while not finished:
                 tmpLine = line.split()
                 record.locus = tmpLine[1]
                 record.length = ''.join(tmpLine[2:4])
-
+            if line.startswith('DEFINITION'):
+                record.definition = getDef(lineIdx, line)
+            
             if line.startswith('ACCESSION'):
                 record.accession = line.rstrip().split()[1]
             
