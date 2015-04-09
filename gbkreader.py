@@ -4,8 +4,7 @@ from urllib import request
 
 #Codon table
 codonTable = {}
-url = 'https://popoolation.googlecode.com/svn-history/\
-        r179/trunk/syn-nonsyn/codon-table.txt'
+url = 'https://popoolation.googlecode.com/svn-history/r179/trunk/syn-nonsyn/codon-table.txt'
 if not os.path.exists('./codon-table.txt'):
     webpage = request.urlopen(url)
     webpage = webpage.read().decode('utf8')
@@ -13,6 +12,8 @@ if not os.path.exists('./codon-table.txt'):
         if not line.startswith('#'):
             codon, aa = line.split(':')
             codonTable[codon] = aa.lstrip()
+    #Also getting a local copy of the file
+    request.urlretrieve(url, filename='./codon-table.txt')
 else:
     page_handle = open('codon-table.txt','r')
     page = page_handle.readlines()
@@ -236,7 +237,7 @@ def dispFeat():
             print('Feature', featureCounter, 'of', total)
             rangeToDisplay = '('+j[1][0].replace('..', ',').replace('<','').replace('>','').rstrip()+'):'
             print('\t'+j[0] + rangeToDisplay)
-            for k in j[1]: print('\t\t/'+k)
+            for k in j[1][1:]: print('\t\t/'+k)
 
     featPrompt = input('Choose the type of feature query P(Position) or N(Name) :')
     while featPrompt != '':
@@ -255,7 +256,7 @@ def dispFeat():
                     tmpFeat = list(map(lambda x: '\t/'+x, featDict[featName]))
                     #Make a list of the output instead of printing
                     print('Feature', featCount, 'of', countFeat(featName))
-                    print(featName, '\n'.join(tmpFeat))
+                    print(featName +'('+tmpFeat[0].replace('..',',').replace('/','').replace('<','').replace('>','').strip()+'):'+'\n'+ '\n'.join(tmpFeat[1:]))
         featPrompt = input('Choose the type of feature query P(Position) or N(Name) :')
 
 
@@ -347,20 +348,19 @@ def translate(sequence, lowerLim, upperLim, frame):
         
             for i in range(0, len(hit), 3):
                 codon = hit[i:i+3]
-                peptide += codonTable[codon]
+                peptide += codonTable[codon].rstrip()
 
             print('Amino acids sequence from nucleotide', ntStart+lowerLim+1, 'to', ntEnd+lowerLim, 'in the', fdisp,'ORF')
-            print(formatSeq(peptide))
-            print(hit)
+            return formatSeq(peptide).replace('-','')
 
     #Taking ATG -> start; ATG/TAA/TGA -> stop
     pattern = re.compile('ATG([ATGC]{3})*?(TAG|TAA|TGA)')
     if type(frame) == int:
-        outputPep(sequence, lowerLim, upperLim, frame)
+        print(outputPep(sequence, lowerLim, upperLim, frame))
             
     elif type(frame) == list:
         for i in frame:
-            outputPep(sequence, lowerLim, upperLim, i)
+            print(outputPep(sequence, lowerLim, upperLim, i))
             
 def dispPeptide():
     #Displays ORF translations
