@@ -100,14 +100,12 @@ def getDef(lineIdx, line):
         counter += 1
     return output
         
-################################################3
 def gb2fasta(record):
     #Converts genbank to fasta format
     sequence = record.sequence
     formattedSeq = ''
     for i in range(0, len(sequence), 80):
         formattedSeq += sequence[i:i+80]+'\n'
-    '''Do I have to get the right description? for the header'''
     header = '>'+record.definition+'\n' 
     
     destfile = input('Filename :')
@@ -124,7 +122,7 @@ def dispMotif():
     def formatOutput(motif, match):
         #takes an motif (re object) and its equivalent string
         #split the string
-        motif  = motif.replace('?',' ').replace('*', ' ').split()
+        motif  = motif.replace('?',' ').replace('*', ' ').split(' ')
         groups = match.groups()
         output = ''
         try:
@@ -138,9 +136,8 @@ def dispMotif():
     tmpSeq = record.sequence
     #Request for motif. Make search case sensitive
     motif = input('Motif:')
-    #Do not accept an empty string or a string containing only non-alphabets chars
+    #Do not accept an empty string or a string containing only non-alphabet chars
     while motif != '' and (any(map(lambda x:x.isalpha(), motif))):
-        print('inside')
         #If motif is too short or empty, keep on asking for motif
         while len(motif) < 5 and motif != '':
             motif = input('Motif:')
@@ -152,8 +149,6 @@ def dispMotif():
             motifObj = re.compile(motifReformatted)
             match = motifObj.search(tmpSeq)
             tmpSeq2 = tmpSeq[match.start()-5:match.end()+5]
-            print(tmpSeq2[:5] + '['+str(match.start())+']' + tmpSeq[match.start():match.end()]+ '['+str(match.end())+']' + tmpSeq2[-5:] )
-            print()
             print(tmpSeq2[:5] + '['+str(match.start())+']' + formatOutput(motif, match) + '['+str(match.end())+']' + tmpSeq2[-5:])
             motif = input('Motif:')
 
@@ -223,8 +218,11 @@ def dispFeat():
     def rangeHandler():
         rangePrompt = input('Range:')
         givenRange = list(map(int, rangePrompt[1:-1].split(',')))
-        '''To correct printed limits - use a function'''
-        print('Searching for features in the range', '[687­3158]...')
+        leftBracket = rangePrompt[0]
+        rightBracket = rangePrompt[-1]
+        lowerLim = rangePrompt[1:-1].split(',')[0]
+        upperLim = rangePrompt[1:-1].split(',')[1]
+        print('Searching for features in the range', leftBracket+lowerLim+'-'+upperLim+rightBracket+'...')
         
         featureCounter = 0
         total = []
@@ -236,7 +234,8 @@ def dispFeat():
         for j in output:
             featureCounter += 1
             print('Feature', featureCounter, 'of', total)
-            print('\t'+j[0])
+            rangeToDisplay = '('+j[1][0].replace('..', ',').replace('<','').replace('>','').rstrip()+'):'
+            print('\t'+j[0] + rangeToDisplay)
             for k in j[1]: print('\t\t/'+k)
 
     featPrompt = input('Choose the type of feature query P(Position) or N(Name) :')
